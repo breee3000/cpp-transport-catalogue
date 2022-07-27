@@ -1,5 +1,6 @@
 #include "stat_reader.h"
 
+
 std::ostream& transport::detail::operator<<(std::ostream& os, const transport::info::BusInfo& info) {
     using namespace std::string_literals;
     if (info.stops_on_route == 0) {
@@ -29,10 +30,30 @@ std::ostream& transport::detail::operator<<(std::ostream& os, const transport::i
     return os;
 }
 
-void transport::detail::PrintBusInfo(TransportCatalogue& cataloge, const std::string &bus) {
-    std::cout << cataloge.GetRouteInfo(bus) << std::endl;
+void transport::detail::PrintBusInfo(transport::TransportCatalogue& catalogue, const std::string &bus) {
+    std::cout << catalogue.GetRouteInfo(bus) << std::endl;
 }
 
-void transport::detail::PrintBusListForStop(TransportCatalogue& catalogue, const std::string& stop) {
+void transport::detail::PrintBusListForStop(transport::TransportCatalogue& catalogue, const std::string& stop) {
     std::cout << catalogue.GetBusList(stop) << std::endl;
+}
+
+void transport::detail::Output(transport::TransportCatalogue& catalogue, std::istream& input) {
+    std::string line = "";
+    getline(input,line);
+    size_t query_output_count = std::stoi(line);
+    std::vector<std::string> query_output;
+    for (size_t i = 0; i < query_output_count; ++i) {
+        getline(input, line);
+        query_output.push_back(line);
+    }
+    for (const std::string_view& line : query_output) {
+        if (line[0] == 'B') {
+            std::string_view bus_name = line.substr(4, (line.size() - 4));
+            transport::detail::PrintBusInfo(catalogue, std::string(bus_name));
+        } else {
+            std::string_view stop_name = line.substr(5, (line.size() - 5));
+            transport::detail::PrintBusListForStop(catalogue, std::string(stop_name));
+        }
+    }
 }

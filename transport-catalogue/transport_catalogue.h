@@ -25,6 +25,8 @@ struct Stop {
 struct Bus {
     std::string bus_name;
     std::vector<Stop*> bus_route;
+    double bus_route_lenght_geo = 0.0;
+    double bus_route_length = 0.0;
 };
 
 } //namespace detail
