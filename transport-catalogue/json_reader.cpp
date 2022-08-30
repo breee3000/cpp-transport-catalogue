@@ -52,6 +52,7 @@ void LoadStops(const json::Dict& query_map, Info& data) {
 void LoadBuses(const json::Dict& query_map, Info& data) {
     BusInfo bus;
     bus.name = query_map.at("name").AsString();
+    bus.is_roundtrip = query_map.at("is_roundtrip").AsBool();
     for (auto& stops_of_bus : query_map.at("stops").AsArray()) {
         bus.stops_str.push_back(stops_of_bus.AsString());
         bus.stops.push_back(bus.stops_str.back());
@@ -153,32 +154,32 @@ void LoadBase(transport::TransportCatalogue& tc, Info& data) {
         tc.AddStop(stop.name, stop.coordinate.lat, stop.coordinate.lng);
     }
     for (const auto& bus : data.buses) {
-        tc.AddRoute(bus.name, bus.stops);
+        tc.AddRoute(bus.name, bus.stops, bus.is_roundtrip);
     }
     for (const auto& dist : data.distances) {
         tc.AddDistance(dist.stop_name_from, dist.stop_name_to, dist.distance);
     }
 }
 
-json::Dict GetBusInfo(const TransportCatalogue& tc, const StatRequest& stat_request) {
+json::Node GetBusInfo(const TransportCatalogue& tc, const StatRequest& stat_request) {
     auto bus_info = tc.GetRouteInfo(stat_request.name);
     if (bus_info.stops_on_route == 0) {
-        return json::Dict{
-            {"request_id"s, stat_request.id},
-            {"error_message"s, "not found"s}
-        };
+        return json::Builder{}.StartDict()
+        .Key("request_id"s).Value(stat_request.id)
+        .Key("error_message"s).Value("not found"s)
+        .EndDict().Build();
     } else {
-        return json::Dict{
-            {"curvature"s, bus_info.curvature},
-            {"request_id"s, stat_request.id},
-            {"route_length"s, bus_info.route_length},
-            {"stop_count"s, static_cast<int>(bus_info.stops_on_route)},
-            {"unique_stop_count"s,  static_cast<int>(bus_info.unique_stops_on_route)}
-        };
+        return json::Builder{}.StartDict()
+        .Key("curvature"s).Value(bus_info.curvature)
+        .Key("request_id"s).Value(stat_request.id)
+        .Key("route_length"s).Value(bus_info.route_length)
+        .Key("stop_count"s).Value(static_cast<int>(bus_info.stops_on_route))
+        .Key("unique_stop_count"s).Value(static_cast<int>(bus_info.unique_stops_on_route))
+        .EndDict().Build();
     }
 }
 
-json::Dict GetStopInfo(const TransportCatalogue& tc, const StatRequest& stat_request) {
+json::Node GetStopInfo(const TransportCatalogue& tc, const StatRequest& stat_request) {
     auto stop_info = tc.GetBusList(stat_request.name);
     json::Array stops_to_buses_arr;
     stops_to_buses_arr.reserve(stop_info.bus_list.size());
@@ -186,27 +187,27 @@ json::Dict GetStopInfo(const TransportCatalogue& tc, const StatRequest& stat_req
         stops_to_buses_arr.emplace_back(std::string(s));
     }
     if (stop_info.stop_name_info.empty()) {
-        return json::Dict{
-            {"request_id"s, stat_request.id},
-            {"error_message"s, "not found"s}
-        };
+        return json::Builder{}.StartDict()
+        .Key("request_id"s).Value(stat_request.id)
+        .Key("error_message"s).Value("not found"s)
+        .EndDict().Build();
     } else {
-        return json::Dict{
-            {"buses"s, stops_to_buses_arr},
-            {"request_id"s, stat_request.id}
-        };
+        return json::Builder{}.StartDict()
+        .Key("buses"s).Value(stops_to_buses_arr)
+        .Key("request_id"s).Value(stat_request.id)
+        .EndDict().Build();
     }
 }
 
-json::Dict GetMapRendererInfo(const TransportCatalogue& tc, const Info& data, const StatRequest& stat_request) {
+json::Node GetMapRendererInfo(const TransportCatalogue& tc, const Info& data, const StatRequest& stat_request) {
     renderer::MapRenderer render(tc, data.render_settings);
-    render.SetRenderBus();
+    render.AddRoutes();
     std::stringstream strm;
     render.Print(strm);
-    return json::Dict{
-        {"request_id"s, stat_request.id},
-        {"map"s, strm.str()}
-    };
+    return json::Builder{}.StartDict()
+    .Key("request_id"s).Value(stat_request.id)
+    .Key("map"s).Value(strm.str())
+    .EndDict().Build();
 }
 
 void Output(TransportCatalogue& tc, Info& data, std::ostream& out) {

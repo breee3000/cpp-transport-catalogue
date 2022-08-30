@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "json.h"
+#include "json_builder.h"
 #include "transport_catalogue.h"
 #include "map_renderer.h"
 
@@ -19,6 +20,7 @@ struct BusInfo {
     std::string name;
     std::vector<std::string_view> stops;
     std::deque<std::string> stops_str;
+    bool is_roundtrip;
 };
 
 struct DistanceInfo {
@@ -52,9 +54,9 @@ Info LoadInfo(std::istream& input);
 
 void LoadBase(transport::TransportCatalogue& tc, Info& data);
 
-json::Dict GetBusInfo(const TransportCatalogue& tc, const StatRequest& stat_request);
-json::Dict GetStopInfo(const TransportCatalogue& tc, const StatRequest& stat_request);
-json::Dict GetMapRendererInfo(const TransportCatalogue& tc, const Info& data, const StatRequest& stat_request);
+json::Node GetBusInfo(const TransportCatalogue& tc, const StatRequest& stat_request);
+json::Node GetStopInfo(const TransportCatalogue& tc, const StatRequest& stat_request);
+json::Node GetMapRendererInfo(const TransportCatalogue& tc, const Info& data, const StatRequest& stat_request);
 
 void Output(TransportCatalogue& tc, Info& data, std::ostream& out);
 

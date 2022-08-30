@@ -1,8 +1,9 @@
 #include "transport_catalogue.h"
 
-void transport::TransportCatalogue::AddRoute(const std::string_view& bus_name, const std::vector<std::string_view>& stops) {
+void transport::TransportCatalogue::AddRoute(const std::string_view& bus_name, const std::vector<std::string_view>& stops, bool is_roundtrip) {
     detail::Bus bus;
     bus.bus_name = bus_name;
+    bus.is_roundtrip = is_roundtrip;
     buses_.push_back(bus);
     for (size_t stop = 0; stop < stops.size(); ++stop) {
         buses_.back().bus_route.push_back(GetStop(stops[stop]));
@@ -28,7 +29,7 @@ void transport::TransportCatalogue::AddDistance(const std::string_view &stop_fro
 
 double transport::TransportCatalogue::GetDistance(const detail::Stop* stop_from, const detail::Stop* stop_to) const {
     using namespace detail;
-    double result = 0;
+    double result = 0.0;
     std::pair<const Stop*, const Stop*> pair_from_to{stop_from, stop_to};
     std::pair<const Stop*, const Stop*> pair_to_from{stop_to, stop_from};
     if (distances_.count(pair_from_to) != 0) {

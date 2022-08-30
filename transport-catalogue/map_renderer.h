@@ -99,9 +99,7 @@ struct RenderSettings {
 };
 
 class MapRenderer {
-
 public:
-
     MapRenderer(const transport::TransportCatalogue& db, RenderSettings settings)
         : settings_(settings)
         , db_(db) {
@@ -118,7 +116,7 @@ public:
         }
     }
 
-    void SetRenderBus();
+    void AddRoutes();
 
     void Print(std::ostream& out);
 

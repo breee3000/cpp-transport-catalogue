@@ -11,8 +11,5 @@ int main() {
     auto data = transport::json_reader::LoadInfo(cin);
     transport::json_reader::LoadBase(tc, data);
     transport::json_reader::Output(tc, data, cout);
-    
-//    renderer::MapRenderer render(tc, data.render_settings);
-//    render.SetRenderBus();
-//    render.Print(std::cout);
 }
+

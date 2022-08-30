@@ -7,6 +7,7 @@
 #include <variant>
 
 namespace json {
+
 using namespace std::literals;
 
 class Node;
@@ -23,6 +24,7 @@ class Node final :
         private std::variant<std::nullptr_t, int, bool, double, std::string, Array, Dict> {
 public:
     using variant::variant;
+    using Value = variant;
 
     bool IsInt() const;
     bool IsDouble() const;
@@ -40,7 +42,11 @@ public:
     const Array& AsArray() const;
     const Dict& AsMap() const;
 
-    const variant& GetValue() const {
+    const Value& GetValue() const {
+        return *this;
+    }
+
+    Value& GetValue() {
         return *this;
     }
 };

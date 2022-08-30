@@ -18,6 +18,7 @@ struct Stop {
 struct Bus {
     std::string_view bus_name;
     std::vector<const Stop*> bus_route;
+    bool is_roundtrip;
 };
 
 } //namespace detail
@@ -25,12 +26,12 @@ struct Bus {
 namespace info {
 
 struct BusInfo {
-    BusInfo(std::string_view name, size_t stops, size_t u_stops, int route_length, double route_curvature);
+    BusInfo(std::string_view name, size_t stops, size_t u_stops, double route_length, double route_curvature);
 
     std::string_view bus_name_info = "";
     size_t stops_on_route = 0;
     size_t unique_stops_on_route = 0;
-    int route_length = 0;
+    double route_length = 0;
     double curvature = 0.0;
 };
 

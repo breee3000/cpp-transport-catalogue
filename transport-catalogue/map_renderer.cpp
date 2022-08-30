@@ -4,7 +4,7 @@ using namespace std::literals;
 
 namespace renderer {
 
-void MapRenderer::SetRenderBus() {
+void MapRenderer::AddRoutes() {
     std::vector<geo::Coordinates> geo_coords;
     for (const auto& bus_name : buses_name_view_) {
         const auto& bus = db_.GetRoute(bus_name)->bus_route;
@@ -29,7 +29,6 @@ void MapRenderer::AddLinesToRenderer(const SphereProjector& proj) {
         for (const auto& stop : bus) {
             polyline_bus.AddPoint({ proj(stop->stop_crd).x, proj(stop->stop_crd).y });
         }
-
         render_bus_.Add(polyline_bus.SetFillColor("none"s)
                         .SetStrokeColor(settings_.color_palette[num_color])
                         .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
@@ -45,8 +44,11 @@ void MapRenderer::AddLinesToRenderer(const SphereProjector& proj) {
 void MapRenderer::AddBusNamesToRenderer(const SphereProjector& proj) {
     size_t num_color = 0;
     for (const auto& bus_name : buses_name_view_) {
-        const auto& bus = db_.GetRoute(bus_name)->bus_route;
-        auto start_stop_coordinates_proj = proj(bus.front()->stop_crd);
+        const auto& bus = db_.GetRoute(bus_name);
+        const bool is_roundtrip = bus->is_roundtrip;
+        const auto& bus_route = bus->bus_route;
+
+        auto start_stop_coordinates_proj = proj(bus_route.front()->stop_crd);
         svg::Text text_bus_name;
         text_bus_name
                 .SetPosition(svg::Point{start_stop_coordinates_proj.x,
@@ -68,9 +70,8 @@ void MapRenderer::AddBusNamesToRenderer(const SphereProjector& proj) {
         render_bus_.Add(text_bus_name_shadow);
         render_bus_.Add(text_bus_name);
 
-        if ((bus.size() > 2 && bus[1] == bus[bus.size() - 2] && bus[0] != bus[bus.size() / 2])
-                || bus.size() == 3) {
-            start_stop_coordinates_proj = proj(bus[bus.size() / 2]->stop_crd);
+        if (!is_roundtrip && bus_route[0] != bus_route[bus_route.size() / 2]) {
+            start_stop_coordinates_proj = proj(bus_route[bus_route.size() / 2]->stop_crd);
             text_bus_name.SetPosition(svg::Point{start_stop_coordinates_proj.x,
                                                  start_stop_coordinates_proj.y});
             text_bus_name_shadow.SetPosition(svg::Point{start_stop_coordinates_proj.x,

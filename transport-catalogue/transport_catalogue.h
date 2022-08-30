@@ -14,14 +14,13 @@ namespace transport {
 
 class TransportCatalogue {
 public:
-
     struct StopsHasher {
         std::size_t operator () (std::pair<const detail::Stop*,const detail::Stop*> t) const noexcept {
             return std::hash<const void*>{}(t.first) + std::hash<const void*>{}(t.second);
         }
     };
 
-    void AddRoute(const std::string_view &bus_name, const std::vector<std::string_view>& stops);
+    void AddRoute(const std::string_view &bus_name, const std::vector<std::string_view>& stops, bool is_roundtrip);
 
     void AddStop(const std::string_view &stop_name, double lat, double lng);
 
