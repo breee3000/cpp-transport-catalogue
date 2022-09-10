@@ -74,13 +74,25 @@ void LoadStat(const json::Array& stat_queries, Info& data) {
             data.stat_requests.push_back({
                                              query_map.at("id"s).AsInt(),
                                              query_map.at("name"s).AsString(),
-                                             query_map.at("type"s).AsString()
+                                             query_map.at("type"s).AsString(),
+                                             ""s,
+                                             ""s
+                                         });
+        } else if (query_map.count("from"s)) {
+            data.stat_requests.push_back({
+                                             query_map.at("id"s).AsInt(),
+                                             ""s,
+                                             query_map.at("type"s).AsString(),
+                                             query_map.at("from"s).AsString(),
+                                             query_map.at("to"s).AsString()
                                          });
         } else {
             data.stat_requests.push_back({
                                              query_map.at("id"s).AsInt(),
                                              ""s,
-                                             query_map.at("type"s).AsString()
+                                             query_map.at("type"s).AsString(),
+                                             ""s,
+                                             ""s
                                          });
         }
     }
@@ -121,6 +133,17 @@ void LoadRenderSettings(const json::Dict& query_map, Info& data) {
     }
 }
 
+void LoadRoutingSettings(const json::Dict& query_map, Info& data) {
+    auto& router_settings = data.router_settings;
+    for (const auto& [param, value] : query_map) {
+        if (param == "bus_wait_time"s) {
+            router_settings.bus_wait_time = value.AsInt();
+        } else if (param == "bus_velocity"s) {
+            router_settings.bus_velocity = value.AsDouble();
+        }
+    }
+}
+
 Info LoadInfo(std::istream& input) {
     Info data;
     auto query_input = json::Load(input);
@@ -145,6 +168,10 @@ Info LoadInfo(std::istream& input) {
     if (root_map.count("render_settings"s)) {
         const auto& setting_map = root_map.at("render_settings"s).AsMap();
         LoadRenderSettings(setting_map, data);
+    }
+    if (root_map.count("routing_settings"s)) {
+        const auto& setting_route = root_map.at("routing_settings"s).AsMap();
+        LoadRoutingSettings(setting_route, data);
     }
     return data;
 }
@@ -210,8 +237,44 @@ json::Node GetMapRendererInfo(const TransportCatalogue& tc, const Info& data, co
     .EndDict().Build();
 }
 
+json::Node GetRouteInfo(const StatRequest& stat_request, router::TransportRouter &router) {
+    std::optional<router::RouteInfo> result = router.GetRoute(stat_request.from, stat_request.to);
+    json::Builder builder;
+    if (!result.has_value()){
+        builder.StartDict()
+                .Key("request_id"s).Value(stat_request.id)
+                .Key("error_message"s).Value("not found"s)
+                .EndDict();
+    } else {
+        const auto& route_edges = result->route_edges;
+        const double time = result->overall_time;
+        builder.StartDict()
+                .Key("request_id"s).Value(stat_request.id)
+                .Key("items"s)
+                .StartArray();
+        for (const router::EdgeInfo* edge : route_edges){
+            builder.StartDict()
+                    .Key("stop_name"s).Value(std::string(edge->from_stop))
+                    .Key("time"s).Value(router.GetWaitWeight())
+                    .Key("type"s).Value("Wait"s)
+                    .EndDict()
+                    .StartDict()
+                    .Key("bus"s).Value(std::string(edge->bus_name))
+                    .Key("span_count"s).Value(edge->span)
+                    .Key("time"s).Value(edge->weight - router.GetWaitWeight())
+                    .Key("type"s).Value("Bus"s)
+                    .EndDict();
+        }
+        builder.EndArray()
+                .Key("total_time"s).Value(time)
+                .EndDict();
+    }
+    return builder.Build();
+}
+
 void Output(TransportCatalogue& tc, Info& data, std::ostream& out) {
     json::Array result;
+    router::TransportRouter router(tc, data.router_settings);
     for (auto& stat_request : data.stat_requests) {
         if (stat_request.type == "Bus") {
             result.emplace_back(std::move(GetBusInfo(tc, stat_request)));
@@ -221,6 +284,9 @@ void Output(TransportCatalogue& tc, Info& data, std::ostream& out) {
         }
         if (stat_request.type == "Map") {
             result.emplace_back(std::move(GetMapRendererInfo(tc, data, stat_request)));
+        }
+        if (stat_request.type == "Route") {
+            result.emplace_back(std::move(GetRouteInfo(stat_request, router)));
         }
     }
     json::Print(json::Document{result}, out);

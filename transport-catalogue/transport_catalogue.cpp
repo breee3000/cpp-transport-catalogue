@@ -99,3 +99,11 @@ info::StopInfo transport::TransportCatalogue::GetBusList(const std::string_view&
 const std::deque<detail::Bus> transport::TransportCatalogue::GetBuses() const {
     return buses_;
 }
+
+const std::unordered_map<std::string_view, detail::Stop*> transport::TransportCatalogue::GetAllStops() const {
+    return stopname_to_stop_;
+}
+
+const std::unordered_map<std::string_view, detail::Bus*> transport::TransportCatalogue::GetAllRoutes() const {
+    return busname_to_bus_;
+}

@@ -38,6 +38,10 @@ public:
 
     const std::deque<detail::Bus> GetBuses() const;
 
+    const std::unordered_map<std::string_view, detail::Stop*> GetAllStops() const;
+
+    const std::unordered_map<std::string_view, detail::Bus*> GetAllRoutes() const;
+
 private:
     std::deque<detail::Stop> stops_;
     std::deque<detail::Bus> buses_;

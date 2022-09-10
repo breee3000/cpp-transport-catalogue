@@ -6,6 +6,7 @@
 #include "json_builder.h"
 #include "transport_catalogue.h"
 #include "map_renderer.h"
+#include "transport_router.h"
 
 namespace transport {
 
@@ -33,6 +34,8 @@ struct StatRequest {
     int id;
     std::string name;
     std::string type;
+    std::string from;
+    std::string to;
 };
 
 struct Info {
@@ -41,6 +44,7 @@ struct Info {
     std::deque<DistanceInfo> distances;
     std::deque<StatRequest> stat_requests;
     renderer::RenderSettings render_settings;
+    router::RoutingSettings router_settings;
 };
 
 std::string SVGFormatColor(const json::Node& value);
@@ -49,6 +53,7 @@ void LoadStops(const json::Dict& query_map, Info& data);
 void LoadBuses(const json::Dict& query_map, Info& data);
 void LoadStat(const json::Array& stat_queries, Info& data);
 void LoadRenderSettings(const json::Dict& query_map, Info& data);
+void LoadRoutingSettings(const json::Dict& query_map, Info& data);
 
 Info LoadInfo(std::istream& input);
 
@@ -57,6 +62,7 @@ void LoadBase(transport::TransportCatalogue& tc, Info& data);
 json::Node GetBusInfo(const TransportCatalogue& tc, const StatRequest& stat_request);
 json::Node GetStopInfo(const TransportCatalogue& tc, const StatRequest& stat_request);
 json::Node GetMapRendererInfo(const TransportCatalogue& tc, const Info& data, const StatRequest& stat_request);
+json::Node GetRouteInfo(const StatRequest& stat_request, router::TransportRouter& router);
 
 void Output(TransportCatalogue& tc, Info& data, std::ostream& out);
 
