@@ -6,65 +6,86 @@ namespace transport {
 
 namespace json_reader {
 
-std::string SVGFormatColor(const json::Node& value) {
-    if (value.IsArray()) {
-        const auto& rgb_arr = value.AsArray();
-        std::string rgb_str = ""s;
-        if (rgb_arr.size() == 3) {
-            rgb_str = "rgb("s;
-        }
-        if (rgb_arr.size() == 4) {
-            rgb_str = "rgba("s;
-        }
-        for (size_t i = 0; i < rgb_arr.size(); ++i) {
-            if (i > 0) {
-                rgb_str += ',';
-            }
-            if (i != 3) {
-                std::ostringstream strs;
-                strs << rgb_arr[i].AsInt();
-                rgb_str += strs.str();
-            } else {
-                std::ostringstream strs;
-                strs << rgb_arr[i].AsDouble();
-                rgb_str += strs.str();
-            }
-        }
-        rgb_str += ')';
-        return rgb_str;
-    } else {
-        return value.AsString();
-    }
-}
-
-void LoadStops(const json::Dict& query_map, Info& data) {
+void LoadStops(const transport_catalogue_serialize::Stop& stop_data, Info& data) {
     StopInfo stop;
-    stop.name = query_map.at("name").AsString();
-    stop.coordinate.lat = query_map.at("latitude").AsDouble();
-    stop.coordinate.lng = query_map.at("longitude").AsDouble();
+    stop.name = stop_data.name();
+    stop.coordinate.lat = stop_data.coordinate().lat();
+    stop.coordinate.lng = stop_data.coordinate().lng();
     data.stops.push_back(std::move(stop));
-    auto& distance_map = query_map.at("road_distances").AsMap();
-    for (auto& [to_stop, dist] : distance_map) {
-        data.distances.push_back({data.stops.back().name, to_stop, dist.AsInt()});
-    }
 }
 
-void LoadBuses(const json::Dict& query_map, Info& data) {
+void LoadBuses(const transport_catalogue_serialize::Bus& bus_data, Info& data) {
     BusInfo bus;
-    bus.name = query_map.at("name").AsString();
-    bus.is_roundtrip = query_map.at("is_roundtrip").AsBool();
-    for (auto& stops_of_bus : query_map.at("stops").AsArray()) {
-        bus.stops_str.push_back(stops_of_bus.AsString());
+    bus.name = bus_data.name();
+    bus.is_roundtrip = bus_data.is_roundtrip();
+    for (auto& stops_of_bus : bus_data.stops()) {
+        bus.stops_str.push_back(stops_of_bus);
         bus.stops.push_back(bus.stops_str.back());
     }
-    if (!query_map.at("is_roundtrip").AsBool()) {
+    if (!bus.is_roundtrip) {
         int size_data_for_bus = static_cast<int>(bus.stops.size());
         for (int i = size_data_for_bus; ; --i) {
-            if ((i - 2) < 0) { break; }
+            if ((i - 2) < 0) {break;}
             bus.stops.push_back(bus.stops[i - 2]);
         }
     }
     data.buses.push_back(std::move(bus));
+}
+
+void LoadDistances(const transport_catalogue_serialize::Distance& distance_data, Info& data) {
+    data.distances.push_back({distance_data.stop_name_from(), distance_data.stop_name_to(), distance_data.distance()});
+}
+
+void LoadRenderSettings(const map_renderer_serialize::RenderSettings& settings, Info& data) {
+    auto& render_settings = data.render_settings;
+    render_settings.width = settings.width();
+    render_settings.height = settings.height();
+    render_settings.padding = settings.padding();
+    render_settings.stop_radius = settings.stop_radius();
+    render_settings.line_width = settings.line_width();
+    render_settings.bus_label_font_size = settings.bus_label_font_size();
+    render_settings.bus_label_offset.x = settings.bus_label_offset_x();
+    render_settings.bus_label_offset.y = settings.bus_label_offset_y();
+    render_settings.stop_label_font_size = settings.stop_label_font_size();
+    render_settings.stop_label_offset.x = settings.stop_label_offset_x();
+    render_settings.stop_label_offset.y = settings.stop_label_offset_y();
+    render_settings.underlayer_color = settings.underlayer_color();
+    render_settings.underlayer_width = settings.underlayer_width();
+    for (const auto& color : settings.color_palette()) {
+        render_settings.color_palette.push_back(color);
+    }
+}
+
+void LoadRoutingSettings(const transport_router_serialize::RoutingSettings& settings, Info& data) {
+    auto& router_settings = data.router_settings;
+    router_settings.bus_wait_time = settings.bus_wait_time();
+    router_settings.bus_velocity = settings.bus_velocity();
+}
+
+void LoadSerializationSettings(const json::Dict& query_map, Info& data) {
+    auto& serialization_settings = data.serialization_settings;
+    serialization_settings.serialize_name = query_map.at("file"s).AsString();
+}
+
+void LoadInfo(Info& data) {
+    serialization::SerializationSettings serialization_settings;
+    serialization_settings.deserialize_name = data.serialization_settings.deserialize_name;
+    serialization::Deserialize(serialization_settings);
+    auto settings = serialization_settings.tc_proto;
+    for (auto& stop : *settings.value().mutable_stops()) {
+        LoadStops(stop, data);
+    }
+    for (auto& bus : *settings.value().mutable_buses()) {
+        LoadBuses(bus, data);
+    }
+    for (auto& distance : *settings.value().mutable_distances()) {
+        LoadDistances(distance, data);
+    }
+    const auto& setting_map = *settings.value().mutable_render_settings();
+    LoadRenderSettings(setting_map, data);
+    
+    const auto& setting_route = *settings.value().mutable_routing_settings();
+    LoadRoutingSettings(setting_route, data);
 }
 
 void LoadStat(const json::Array& stat_queries, Info& data) {
@@ -98,80 +119,23 @@ void LoadStat(const json::Array& stat_queries, Info& data) {
     }
 }
 
-void LoadRenderSettings(const json::Dict& query_map, Info& data) {
-    auto& render_settings = data.render_settings;
-    for (const auto& [param, value] : query_map) {
-        if (param == "width"s) {
-            render_settings.width = value.AsDouble();
-        } else if (param == "height"s) {
-            render_settings.height = value.AsDouble();
-        } else if (param == "padding"s) {
-            render_settings.padding = value.AsDouble();
-        } else if (param == "stop_radius"s) {
-            render_settings.stop_radius = value.AsDouble();
-        } else if (param == "line_width"s) {
-            render_settings.line_width = value.AsDouble();
-        } else if (param == "bus_label_font_size"s) {
-            render_settings.bus_label_font_size = value.AsInt();
-        } else if (param == "bus_label_offset"s) {
-            render_settings.bus_label_offset.x = value.AsArray()[0].AsDouble();
-            render_settings.bus_label_offset.y = value.AsArray()[1].AsDouble();
-        } else if (param == "stop_label_font_size"s) {
-            render_settings.stop_label_font_size = value.AsInt();
-        } else if (param == "stop_label_offset"s) {
-            render_settings.stop_label_offset.x = value.AsArray()[0].AsDouble();
-            render_settings.stop_label_offset.y = value.AsArray()[1].AsDouble();
-        } else if (param == "underlayer_color"s) {
-            render_settings.underlayer_color = SVGFormatColor(value);
-        } else if (param == "underlayer_width"s) {
-            render_settings.underlayer_width = value.AsDouble();
-        } else if (param == "color_palette"s) {
-            for (const auto& color : value.AsArray()) {
-                render_settings.color_palette.push_back(SVGFormatColor(color));
-            }
-        }
-    }
+void LoadDeserializationSettings(const json::Dict& query_map, Info& data) {
+    auto& serialization_settings = data.serialization_settings;
+    serialization_settings.deserialize_name = query_map.at("file"s).AsString();
 }
 
-void LoadRoutingSettings(const json::Dict& query_map, Info& data) {
-    auto& router_settings = data.router_settings;
-    for (const auto& [param, value] : query_map) {
-        if (param == "bus_wait_time"s) {
-            router_settings.bus_wait_time = value.AsInt();
-        } else if (param == "bus_velocity"s) {
-            router_settings.bus_velocity = value.AsDouble();
-        }
-    }
-}
-
-Info LoadInfo(std::istream& input) {
+Info LoadRequests(std::istream& input) {
     Info data;
     auto query_input = json::Load(input);
     auto& root = query_input.GetRoot();
     auto& root_map = root.AsMap();
-    if (root_map.count("base_requests")) {
-        auto& queries = root_map.at("base_requests").AsArray();
-        for (auto& query : queries) {
-            auto& query_map = query.AsMap();
-            if (query_map.at("type").AsString() == "Stop") {
-                LoadStops(query_map, data);
-            }
-            if (query_map.at("type").AsString() == "Bus") {
-                LoadBuses(query_map, data);
-            }
-        }
-    }
     if (root_map.count("stat_requests"s)) {
         auto& queries = root_map.at("stat_requests"s).AsArray();
         LoadStat(queries, data);
     }
-    if (root_map.count("render_settings"s)) {
-        const auto& setting_map = root_map.at("render_settings"s).AsMap();
-        LoadRenderSettings(setting_map, data);
-    }
-    if (root_map.count("routing_settings"s)) {
-        const auto& setting_route = root_map.at("routing_settings"s).AsMap();
-        LoadRoutingSettings(setting_route, data);
+    if (root_map.count("serialization_settings"s)) {
+        const auto& serialization_settings = root_map.at("serialization_settings"s).AsMap();
+        LoadDeserializationSettings(serialization_settings, data);
     }
     return data;
 }
