@@ -1,6 +1,6 @@
 #include "domain.h"
 
-detail::Stop::Stop(std::string_view name, double lat, double lng)
+detail::Stop::Stop(std::string name, double lat, double lng)
     :stop_name(name){
     stop_crd.lat = lat;
     stop_crd.lng = lng;

@@ -19,15 +19,18 @@ int main(int argc, char* argv[]) {
     }
     const std::string_view mode(argv[1]);
     if (mode == "make_base"sv) {
-        serialization::Serialize(std::cin);
+        auto data = transport::json_reader::LoadInfo(std::cin);
+        serialization::Serialize(data);
     } else if (mode == "process_requests"sv) {
         transport::TransportCatalogue tc;
         auto data = transport::json_reader::LoadRequests(std::cin);
-        transport::json_reader::LoadInfo(data);
-        transport::json_reader::LoadBase(tc, data);
+        serialization::Deserialize(tc, data);
         transport::json_reader::Output(tc, data, std::cout);
     } else {
         PrintUsage();
         return 1;
     }
 }
+
+
+

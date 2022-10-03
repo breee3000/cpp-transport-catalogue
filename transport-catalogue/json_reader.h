@@ -7,7 +7,6 @@
 #include "transport_catalogue.h"
 #include "map_renderer.h"
 #include "transport_router.h"
-#include "serialization.h"
 
 namespace transport {
 
@@ -39,6 +38,11 @@ struct StatRequest {
     std::string to;
 };
 
+struct SerializationSettings {
+    std::string serialize_name;
+    std::string deserialize_name;
+};
+
 struct Info {
     std::deque<StopInfo> stops;
     std::deque<BusInfo> buses;
@@ -46,29 +50,27 @@ struct Info {
     std::deque<StatRequest> stat_requests;
     renderer::RenderSettings render_settings;
     router::RoutingSettings router_settings;
-    serialization::SerializationSettings serialization_settings;
+    SerializationSettings serialization_settings;
 };
 
-void LoadStops(const transport_catalogue_serialize::Stop& stop_data, Info& data);
-void LoadBuses(const transport_catalogue_serialize::Bus& bus_data, Info& data);
-void LoadDistances(const transport_catalogue_serialize::Distance& distance_data, Info& data);
-void LoadRenderSettings(const map_renderer_serialize::RenderSettings& settings, Info& data);
-void LoadRoutingSettings(const transport_router_serialize::RoutingSettings& settings, Info& data);
-void LoadSerializationSettings(const json::Dict& query_map, Info& data);
+std::string SVGFormatColor(const json::Node& value);
 
-void LoadInfo(Info& data) ;
+void LoadStops(const json::Dict& query_map, Info& data);
+void LoadBuses(const json::Dict& query_map, Info& data);
+void LoadRenderSettings(const json::Dict& query_map, Info& data);
+void LoadRoutingSettings(const json::Dict& query_map, Info& data);
+
+Info LoadInfo(std::istream& input);
 
 void LoadStat(const json::Array& stat_queries, Info& data);
 void LoadDeserializationSettings(const json::Dict& query_map, Info& data);
 
 Info LoadRequests(std::istream& input);
 
-void LoadBase(transport::TransportCatalogue& tc, Info& data);
-
 json::Node GetBusInfo(const TransportCatalogue& tc, const StatRequest& stat_request);
 json::Node GetStopInfo(const TransportCatalogue& tc, const StatRequest& stat_request);
-json::Node GetMapRendererInfo(const TransportCatalogue& tc, const Info& data, const StatRequest& stat_request);
-json::Node GetRouteInfo(const StatRequest& stat_request, router::TransportRouter& router);
+json::Node GetMapRendererInfo(renderer::MapRenderer& render, const StatRequest& stat_request);
+json::Node GetRouteInfo(router::TransportRouter& router, const StatRequest& stat_request);
 
 void Output(TransportCatalogue& tc, Info& data, std::ostream& out);
 

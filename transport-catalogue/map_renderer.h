@@ -105,10 +105,10 @@ public:
         , db_(db) {
         const auto& buses = db_.GetBuses();
         for (const auto& bus : buses) {
-            buses_name_view_.insert(bus.bus_name);
+            buses_name_.insert(bus.bus_name);
         }
 
-        for (const auto& bus_name : buses_name_view_) {
+        for (const auto& bus_name : buses_name_) {
             const auto& bus = db_.GetRoute(bus_name)->bus_route;
             for (const auto& stop : bus) {
                 stop_names_.insert(stop->stop_name);
@@ -129,8 +129,8 @@ private:
     RenderSettings settings_;
     svg::Document render_bus_;
     const transport::TransportCatalogue& db_;
-    std::set<std::string_view> buses_name_view_;
-    std::set<std::string_view> stop_names_;
+    std::set<std::string> buses_name_;
+    std::set<std::string> stop_names_;
 };
 
 } // renderer

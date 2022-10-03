@@ -20,9 +20,9 @@ public:
         }
     };
 
-    void AddRoute(const std::string_view &bus_name, const std::vector<std::string_view>& stops, bool is_roundtrip);
+    void AddRoute(const std::string &bus_name, const std::vector<std::string>& stops, bool is_roundtrip);
 
-    void AddStop(const std::string_view &stop_name, double lat, double lng);
+    void AddStop(const std::string &stop_name, double lat, double lng);
 
     void AddDistance(const std::string_view &stop_from, const std::string_view &stop_to, double d);
 

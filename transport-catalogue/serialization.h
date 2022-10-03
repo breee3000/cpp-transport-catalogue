@@ -1,36 +1,29 @@
 #pragma once
 
-#include <string>
-#include <optional>
-#include <sstream>
 #include <fstream>
 
-#include "transport_catalogue.h"
-#include "json_builder.h"
+#include "json_reader.h"
 
 #include "transport_catalogue.pb.h"
 #include "map_renderer.pb.h"
-#include "transport_router.h"
+#include "transport_router.pb.h"
 
 namespace serialization {
 
 using TCProto = std::optional<::transport_catalogue_serialize::TransportCatalogue>;
 
-struct SerializationSettings {
-    std::string serialize_name;
-    std::string deserialize_name;
-    TCProto tc_proto;
-};
+void SaveStops(const transport::json_reader::Info& info, TCProto& tc_proto);
+void SaveBuses(const transport::json_reader::Info& info, TCProto& tc_proto);
+void SaveDistances(const transport::json_reader::Info& info, TCProto& tc_proto);
+void SaveRenderSettings(const transport::json_reader::Info& info, TCProto& tc_proto);
+void SaveRoutingSettings(const transport::json_reader::Info& info, TCProto& tc_proto);
 
-void SaveStops(const json::Dict& query_map, SerializationSettings& base);
-void SaveBuses(const json::Dict& query_map, SerializationSettings& base);
-std::string GetColor(const json::Node& value);
-void SaveRenderSettings(const json::Dict& query_map, SerializationSettings& base);
-void SaveRoutingSettings(const json::Dict& query_map, SerializationSettings& base);
-void LoadSerializationSettings(const json::Dict& query_map, SerializationSettings& base);
+void Serialize (const transport::json_reader::Info& info);
 
-void Serialize(std::istream& input);
+void LoadBase(transport::TransportCatalogue& tc, TCProto& tc_proto);
+void LoadRenderSettings(transport::json_reader::Info& info, TCProto& tc_proto);
+void LoadRoutingSettings(transport::json_reader::Info& info, TCProto& tc_proto);
 
-void Deserialize(SerializationSettings& settings);
+void Deserialize (transport::TransportCatalogue& tc, transport::json_reader::Info& info);
 
-} // namespace serialization
+} //namespace serialization

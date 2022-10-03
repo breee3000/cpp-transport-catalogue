@@ -35,8 +35,7 @@ set(CPP_FILES
 set(PROTO_FILES
     transport_catalogue.proto
     map_renderer.proto
-    transport_router.proto
-)
+    transport_router.proto)
 
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_FILES})
 

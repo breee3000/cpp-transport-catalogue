@@ -6,7 +6,7 @@ namespace renderer {
 
 void MapRenderer::AddRoutes() {
     std::vector<geo::Coordinates> geo_coords;
-    for (const auto& bus_name : buses_name_view_) {
+    for (const auto& bus_name : buses_name_) {
         const auto& bus = db_.GetRoute(bus_name)->bus_route;
         for (const auto& stop_of_bus : bus) {
             geo_coords.push_back(stop_of_bus->stop_crd);
@@ -23,7 +23,7 @@ void MapRenderer::AddRoutes() {
 
 void MapRenderer::AddLinesToRenderer(const SphereProjector& proj) {
     size_t num_color = 0;
-    for (const auto& bus_name : buses_name_view_) {
+    for (const auto& bus_name : buses_name_) {
         svg::Polyline polyline_bus;
         const auto& bus = db_.GetRoute(bus_name)->bus_route;
         for (const auto& stop : bus) {
@@ -43,7 +43,7 @@ void MapRenderer::AddLinesToRenderer(const SphereProjector& proj) {
 
 void MapRenderer::AddBusNamesToRenderer(const SphereProjector& proj) {
     size_t num_color = 0;
-    for (const auto& bus_name : buses_name_view_) {
+    for (const auto& bus_name : buses_name_) {
         const auto& bus = db_.GetRoute(bus_name);
         const bool is_roundtrip = bus->is_roundtrip;
         const auto& bus_route = bus->bus_route;

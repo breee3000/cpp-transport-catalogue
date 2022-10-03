@@ -3,20 +3,21 @@
 #include <string_view>
 #include <vector>
 #include <set>
+#include <string>
 
 #include "geo.h"
 
 namespace detail {
 
 struct Stop {
-    Stop(std::string_view name, double lat, double lng);
+    Stop(std::string name, double lat, double lng);
 
-    std::string_view stop_name;
+    std::string stop_name;
     geo::Coordinates stop_crd;
 };
 
 struct Bus {
-    std::string_view bus_name;
+    std::string bus_name;
     std::vector<const Stop*> bus_route;
     bool is_roundtrip;
 };

@@ -1,6 +1,6 @@
 #include "transport_catalogue.h"
 
-void transport::TransportCatalogue::AddRoute(const std::string_view& bus_name, const std::vector<std::string_view>& stops, bool is_roundtrip) {
+void transport::TransportCatalogue::AddRoute(const std::string& bus_name, const std::vector<std::string>& stops, bool is_roundtrip) {
     detail::Bus bus;
     bus.bus_name = bus_name;
     bus.is_roundtrip = is_roundtrip;
@@ -14,7 +14,7 @@ void transport::TransportCatalogue::AddRoute(const std::string_view& bus_name, c
     busname_to_bus_[buses_.back().bus_name] = &buses_.back();
 }
 
-void transport::TransportCatalogue::AddStop(const std::string_view& stop_name, double lat, double lng) {
+void transport::TransportCatalogue::AddStop(const std::string& stop_name, double lat, double lng) {
     detail::Stop stop = {stop_name, lat, lng};
     stops_.push_back(stop);
     stopname_to_stop_[stops_.back().stop_name] = &stops_.back();

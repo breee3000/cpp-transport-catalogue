@@ -2,153 +2,128 @@
 
 namespace serialization {
 
-void SaveStops(const json::Dict& query_map, SerializationSettings& base) {
+void SaveStops(const transport::json_reader::Info& info, TCProto& tc_proto) {
     transport_catalogue_serialize::Stop stop;
-    stop.set_name(query_map.at("name").AsString());
-    stop.mutable_coordinate()->set_lat(query_map.at("latitude").AsDouble());
-    stop.mutable_coordinate()->set_lng(query_map.at("longitude").AsDouble());
-    base.tc_proto.value().mutable_stops()->Add(std::move(stop));
-    auto& distance_map = query_map.at("road_distances").AsMap();
-    for (auto& [to_stop, dist] : distance_map) {
-        transport_catalogue_serialize::Distance distance;
-        distance.set_stop_name_from(query_map.at("name").AsString());
-        distance.set_stop_name_to(to_stop);
-        distance.set_distance(dist.AsInt());
-        base.tc_proto.value().mutable_distances()->Add(std::move(distance));
+    for (const auto& stop_info : info.stops) {
+        stop.set_name(stop_info.name);
+        stop.mutable_coordinate()->set_lat(stop_info.coordinate.lat);
+        stop.mutable_coordinate()->set_lng(stop_info.coordinate.lng);
+        tc_proto.value().mutable_stops()->Add(std::move(stop));
     }
 }
 
-void SaveBuses(const json::Dict& query_map, SerializationSettings& base) {
+void SaveBuses(const transport::json_reader::Info& info, TCProto& tc_proto) {
     transport_catalogue_serialize::Bus bus;
-    bus.set_name(query_map.at("name").AsString());
-    bus.set_is_roundtrip(query_map.at("is_roundtrip").AsBool());
-    for (auto& stops_of_bus : query_map.at("stops").AsArray()) {
-        bus.add_stops(stops_of_bus.AsString());
-    }
-    base.tc_proto.value().mutable_buses()->Add(std::move(bus));
-}
-
-std::string GetColor(const json::Node& value) {
-    if (value.IsArray()) {
-        const auto& rgb_arr = value.AsArray();
-        std::string rgb_str = "";
-        if (rgb_arr.size() == 3) {
-            rgb_str = "rgb(";
+    for (const auto& bus_info : info.buses) {
+        bus.set_name(bus_info.name);
+        bus.set_is_roundtrip(bus_info.is_roundtrip);
+        for (const auto& stop: bus_info.stops) {
+            bus.add_stops(std::string(stop));
         }
-        if (rgb_arr.size() == 4) {
-            rgb_str = "rgba(";
-        }
-        for (size_t i = 0; i < rgb_arr.size(); ++i) {
-            if (i > 0) {
-                rgb_str += ',';
-            }
-            if (i != 3) {
-                std::ostringstream strs;
-                strs << rgb_arr[i].AsInt();
-                rgb_str += strs.str();
-            } else {
-                std::ostringstream strs;
-                strs << rgb_arr[i].AsDouble();
-                rgb_str += strs.str();
-            }
-        }
-        rgb_str += ')';
-        return rgb_str;
-    } else {
-        return value.AsString();
+        tc_proto.value().mutable_buses()->Add(std::move(bus));
     }
 }
 
-void SaveRenderSettings(const json::Dict& query_map, SerializationSettings& base) {
+void SaveDistances(const transport::json_reader::Info& info, TCProto& tc_proto) {
+    transport_catalogue_serialize::Distance distance;
+    for (const auto& distanse_info : info.distances) {
+        distance.set_stop_name_from(distanse_info.stop_name_from);
+        distance.set_stop_name_to(distanse_info.stop_name_to);
+        distance.set_distance(distanse_info.distance);
+        tc_proto.value().mutable_distances()->Add(std::move(distance));
+    }
+}
+
+void SaveRenderSettings(const transport::json_reader::Info& info, TCProto& tc_proto) {
     map_renderer_serialize::RenderSettings render_settings;
-    for (const auto& [param, value] : query_map) {
-        if (param == "width") {
-            render_settings.set_width(value.AsDouble());
-        } else if (param == "height") {
-            render_settings.set_height(value.AsDouble());
-        } else if (param == "padding") {
-            render_settings.set_padding(value.AsDouble());
-        } else if (param == "stop_radius") {
-            render_settings.set_stop_radius(value.AsDouble());
-        } else if (param == "line_width") {
-            render_settings.set_line_width(value.AsDouble());
-        } else if (param == "bus_label_font_size") {
-            render_settings.set_bus_label_font_size(value.AsInt());
-        } else if (param == "bus_label_offset") {
-            render_settings.set_bus_label_offset_x(value.AsArray()[0].AsDouble());
-            render_settings.set_bus_label_offset_y(value.AsArray()[1].AsDouble());
-        } else if (param == "stop_label_font_size") {
-            render_settings.set_stop_label_font_size(value.AsInt());
-        } else if (param == "stop_label_offset") {
-            render_settings.set_stop_label_offset_x(value.AsArray()[0].AsDouble());
-            render_settings.set_stop_label_offset_y(value.AsArray()[1].AsDouble());
-        } else if (param == "underlayer_color") {
-            render_settings.set_underlayer_color(GetColor(value));
-        } else if (param == "underlayer_width") {
-            render_settings.set_underlayer_width(value.AsDouble());
-        } else if (param == "color_palette") {
-            for (const auto& color : value.AsArray()) {
-                render_settings.add_color_palette(GetColor(color));
-            }
-        }
+    render_settings.set_width(info.render_settings.width);
+    render_settings.set_height(info.render_settings.height);
+    render_settings.set_padding(info.render_settings.padding);
+    render_settings.set_stop_radius(info.render_settings.stop_radius);
+    render_settings.set_line_width(info.render_settings.line_width);
+    render_settings.set_bus_label_font_size(info.render_settings.bus_label_font_size);
+    render_settings.set_bus_label_offset_x(info.render_settings.bus_label_offset.x);
+    render_settings.set_bus_label_offset_y(info.render_settings.bus_label_offset.y);
+    render_settings.set_stop_label_font_size(info.render_settings.stop_label_font_size);
+    render_settings.set_stop_label_offset_x(info.render_settings.stop_label_offset.x);
+    render_settings.set_stop_label_offset_y(info.render_settings.stop_label_offset.y);
+    render_settings.set_underlayer_color(std::get<std::string>(info.render_settings.underlayer_color));
+    render_settings.set_underlayer_width(info.render_settings.underlayer_width);
+    for (const auto& color: info.render_settings.color_palette) {
+        render_settings.add_color_palette(std::get<std::string>(color));
     }
-    *base.tc_proto.value().mutable_render_settings() = std::move(render_settings);
+    *tc_proto.value().mutable_render_settings() = std::move(render_settings);
 }
 
-void SaveRoutingSettings(const json::Dict& query_map, SerializationSettings& base) {
+void SaveRoutingSettings(const transport::json_reader::Info& info, TCProto& tc_proto) {
     transport_router_serialize::RoutingSettings routing_settings;
-    for (const auto& [param, value] : query_map) {
-        if (param == "bus_wait_time") {
-            routing_settings.set_bus_wait_time(value.AsInt());
-        } else if (param == "bus_velocity") {
-            routing_settings.set_bus_velocity(value.AsDouble());
+    routing_settings.set_bus_wait_time(info.router_settings.bus_wait_time);
+    routing_settings.set_bus_velocity(info.router_settings.bus_velocity);
+    *tc_proto.value().mutable_routing_settings() = std::move(routing_settings);
+}
+
+void Serialize (const transport::json_reader::Info& info) {
+    TCProto tc_proto;
+    tc_proto = std::make_optional<::transport_catalogue_serialize::TransportCatalogue>();
+    SaveStops(info, tc_proto);
+    SaveBuses(info, tc_proto);
+    SaveDistances(info, tc_proto);
+    SaveRenderSettings(info, tc_proto);
+    SaveRoutingSettings(info, tc_proto);
+    std::ofstream out_file(info.serialization_settings.serialize_name, std::ios::binary);
+    tc_proto.value().SerializeToOstream(&out_file);
+}
+
+void LoadBase(transport::TransportCatalogue& tc, TCProto& tc_proto) {
+    for (const auto& stop_data: *tc_proto.value().mutable_stops()) {
+        tc.AddStop(stop_data.name(), stop_data.coordinate().lat(), stop_data.coordinate().lng());
+    }
+    for (const auto& bus_data : *tc_proto.value().mutable_buses()) {
+        std::vector<std::string> stops;
+        for (const auto& stop: bus_data.stops()) {
+            stops.push_back(stop);
         }
+        tc.AddRoute(bus_data.name(), stops, bus_data.is_roundtrip());
     }
-    *base.tc_proto.value().mutable_routing_settings() = std::move(routing_settings);
+    for (const auto& distance_data : *tc_proto.value().mutable_distances()) {
+        tc.AddDistance(distance_data.stop_name_from(), distance_data.stop_name_to(), distance_data.distance());
+    }
 }
 
-void LoadSerializationSettings(const json::Dict& query_map, SerializationSettings& base) {
-    base.serialize_name = query_map.at("file").AsString();
+void LoadRenderSettings(transport::json_reader::Info& info, TCProto& tc_proto) {
+    const auto& settings = *tc_proto.value().mutable_render_settings();
+    info.render_settings.width = settings.width();
+    info.render_settings.height = settings.height();
+    info.render_settings.padding = settings.padding();
+    info.render_settings.stop_radius = settings.stop_radius();
+    info.render_settings.line_width = settings.line_width();
+    info.render_settings.bus_label_font_size = settings.bus_label_font_size();
+    info.render_settings.bus_label_offset.x = settings.bus_label_offset_x();
+    info.render_settings.bus_label_offset.y = settings.bus_label_offset_y();
+    info.render_settings.stop_label_font_size = settings.stop_label_font_size();
+    info.render_settings.stop_label_offset.x = settings.stop_label_offset_x();
+    info.render_settings.stop_label_offset.y = settings.stop_label_offset_y();
+    info.render_settings.underlayer_color = settings.underlayer_color();
+    info.render_settings.underlayer_width = settings.underlayer_width();
+    for (const auto& color : settings.color_palette()) {
+        info.render_settings.color_palette.push_back(color);
+    }
 }
 
-void Serialize(std::istream& input) {
-    SerializationSettings base;
-    base.tc_proto = std::make_optional<::transport_catalogue_serialize::TransportCatalogue>();
-    auto query_input = json::Load(input);
-    auto& root = query_input.GetRoot();
-    auto& root_map = root.AsMap();
-    if (root_map.count("base_requests")) {
-        auto& queries = root_map.at("base_requests").AsArray();
-        for (auto& query : queries) {
-            auto& query_map = query.AsMap();
-            if (query_map.at("type").AsString() == "Stop") {
-                SaveStops(query_map, base);
-            }
-            if (query_map.at("type").AsString() == "Bus") {
-                SaveBuses(query_map, base);
-            }
-        }
-    }
-    if (root_map.count("render_settings")) {
-        const auto& setting_map = root_map.at("render_settings").AsMap();
-        SaveRenderSettings(setting_map, base);
-    }
-    if (root_map.count("routing_settings")) {
-        const auto& setting_route = root_map.at("routing_settings").AsMap();
-        SaveRoutingSettings(setting_route, base);
-    }
-    if (root_map.count("serialization_settings")) {
-        const auto& serialization_settings = root_map.at("serialization_settings").AsMap();
-        LoadSerializationSettings(serialization_settings, base);
-    }
-    std::ofstream out_file(base.serialize_name, std::ios::binary);
-    base.tc_proto.value().SerializeToOstream(&out_file);
+void LoadRoutingSettings(transport::json_reader::Info& info, TCProto& tc_proto) {
+    const auto& router_settings = *tc_proto.value().mutable_routing_settings();
+    info.router_settings.bus_wait_time = router_settings.bus_wait_time();
+    info.router_settings.bus_velocity = router_settings.bus_velocity();
 }
 
-void Deserialize(SerializationSettings& settings) {
-    settings.tc_proto = std::make_optional<::transport_catalogue_serialize::TransportCatalogue>();
-    std::ifstream in_file(settings.deserialize_name, std::ios::binary);
-    settings.tc_proto.value().ParseFromIstream(&in_file);
+void Deserialize (transport::TransportCatalogue& tc, transport::json_reader::Info& info) {
+    TCProto tc_proto;
+    tc_proto = std::make_optional<::transport_catalogue_serialize::TransportCatalogue>();
+    std::ifstream in_file(info.serialization_settings.deserialize_name, std::ios::binary);
+    tc_proto.value().ParseFromIstream(&in_file);
+    LoadBase(tc, tc_proto);
+    LoadRenderSettings(info, tc_proto);
+    LoadRoutingSettings(info, tc_proto);
 }
 
-} // namespace serialization
+} //namespace serialization
